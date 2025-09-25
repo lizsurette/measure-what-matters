@@ -1,0 +1,119 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Ensure basic styles work */
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+/* Custom styles */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Metric tile improvements */
+.metric-tile {
+  word-wrap: break-word;
+  hyphens: auto;
+}
+
+.metric-value {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Better text wrapping for metric values */
+.break-all {
+  word-break: break-all;
+}
+
+/* Ensure consistent card heights */
+.category-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.metric-grid {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Smooth transitions for interactive elements */
+.transition-all {
+  transition-property: all;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+
+/* Custom scrollbar */
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 #f1f5f9;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 3px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Health status animations with Red Hat colors */
+@keyframes health-pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+.health-indicator-red {
+  animation: health-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  background-color: #ee0000; /* Red Hat Red */
+}
+
+/* Red Hat brand-specific styles */
+.red-hat-accent {
+  color: #ee0000;
+}
+
+.red-hat-bg-accent {
+  background-color: #ee0000;
+}
+
+.red-hat-border-accent {
+  border-color: #ee0000;
+}
+
+/* Loading states */
+.loading-skeleton {
+  background: linear-gradient(-90deg, #f0f0f0 0%, #e0e0e0 50%, #f0f0f0 100%);
+  background-size: 400% 400%;
+  animation: pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0% {
+    background-position: 0% 0%;
+  }
+  100% {
+    background-position: -135% 0%;
+  }
+}

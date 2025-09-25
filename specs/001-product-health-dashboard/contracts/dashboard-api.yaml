@@ -1,0 +1,418 @@
+openapi: 3.0.3
+info:
+  title: Product Health Dashboard API
+  description: RESTful API for Forrester MAD metrics framework dashboard
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:3000/api
+    description: Development server
+
+paths:
+  /metrics:
+    get:
+      summary: Get all metrics with current values
+      description: Returns all metrics across five categories with latest values and health status
+      parameters:
+        - name: category
+          in: query
+          description: Filter by metric category
+          required: false
+          schema:
+            type: string
+            enum: [business_value, quality, efficiency, engagement, progress]
+        - name: include_trends
+          in: query
+          description: Include historical trend data
+          required: false
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  metrics:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Metric'
+                  last_updated:
+                    type: string
+                    format: date-time
+
+  /metrics/{id}:
+    get:
+      summary: Get specific metric details
+      description: Returns detailed metric information including calculation method and data source
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Metric details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MetricDetail'
+        '404':
+          description: Metric not found
+
+  /metrics/{id}/history:
+    get:
+      summary: Get metric historical data
+      description: Returns time series data for trend analysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: period
+          in: query
+          description: Time period for historical data
+          required: false
+          schema:
+            type: string
+            enum: [week, month, quarter, year]
+            default: month
+      responses:
+        '200':
+          description: Historical data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  metric_id:
+                    type: string
+                    format: uuid
+                  data_points:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TimeSeriesPoint'
+
+  /metrics/{id}/recommendations:
+    get:
+      summary: Get AI-generated recommendations for metric
+      description: Returns contextual suggestions when metric health is poor
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: AI recommendations
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  metric_id:
+                    type: string
+                    format: uuid
+                  current_status:
+                    type: string
+                    enum: [red, yellow, green]
+                  recommendations:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Recommendation'
+        '204':
+          description: No recommendations needed (metric is healthy)
+
+  /categories:
+    get:
+      summary: Get all metric categories
+      description: Returns Forrester framework categories with summary statistics
+      responses:
+        '200':
+          description: Categories list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MetricCategory'
+
+  /dashboard/config:
+    get:
+      summary: Get dashboard configuration
+      description: Returns layout and filter settings for dashboard
+      responses:
+        '200':
+          description: Dashboard configuration
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardConfig'
+
+  /integrations/status:
+    get:
+      summary: Get data source integration status
+      description: Returns health status of all external integrations
+      responses:
+        '200':
+          description: Integration status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sources:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/DataSourceStatus'
+                  last_check:
+                    type: string
+                    format: date-time
+
+components:
+  schemas:
+    Metric:
+      type: object
+      required:
+        - id
+        - name
+        - category
+        - value
+        - health_status
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          example: "Net Promoter Score"
+        category:
+          type: string
+          enum: [business_value, quality, efficiency, engagement, progress]
+        value:
+          type: number
+          format: double
+        unit:
+          type: string
+          example: "percentage"
+        health_status:
+          type: string
+          enum: [red, yellow, green]
+        is_leading_indicator:
+          type: boolean
+        last_updated:
+          type: string
+          format: date-time
+        data_freshness:
+          type: string
+          enum: [current, stale, estimated]
+
+    MetricDetail:
+      allOf:
+        - $ref: '#/components/schemas/Metric'
+        - type: object
+          properties:
+            calculation_method:
+              type: string
+              description: "Formula or algorithm used to calculate this metric"
+            data_source:
+              $ref: '#/components/schemas/DataSource'
+            thresholds:
+              type: object
+              properties:
+                red:
+                  type: number
+                yellow:
+                  type: number
+                green:
+                  type: number
+            correlation_metrics:
+              type: array
+              items:
+                type: string
+                format: uuid
+              description: "Related metrics that influence this one"
+
+    TimeSeriesPoint:
+      type: object
+      required:
+        - timestamp
+        - value
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        value:
+          type: number
+          format: double
+        is_estimated:
+          type: boolean
+          description: "True if value was estimated due to missing data"
+        data_quality_score:
+          type: number
+          format: double
+          minimum: 0.0
+          maximum: 1.0
+
+    Recommendation:
+      type: object
+      required:
+        - priority
+        - action
+        - description
+      properties:
+        priority:
+          type: string
+          enum: [high, medium, low]
+        action:
+          type: string
+          example: "Increase test automation coverage"
+        description:
+          type: string
+          example: "Current test automation is at 45%. Industry standard is 70%+. Focus on critical path scenarios first."
+        estimated_impact:
+          type: string
+          enum: [high, medium, low]
+        implementation_effort:
+          type: string
+          enum: [high, medium, low]
+        related_metrics:
+          type: array
+          items:
+            type: string
+            format: uuid
+
+    MetricCategory:
+      type: object
+      required:
+        - id
+        - name
+        - display_order
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          enum: [Business Value, Quality, Efficiency, Engagement, Progress]
+        display_order:
+          type: integer
+          minimum: 1
+          maximum: 5
+        is_central:
+          type: boolean
+          description: "True only for Business Value category"
+        health_summary:
+          type: object
+          properties:
+            total_metrics:
+              type: integer
+            healthy_count:
+              type: integer
+            warning_count:
+              type: integer
+            critical_count:
+              type: integer
+
+    DataSource:
+      type: object
+      required:
+        - id
+        - name
+        - type
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          example: "GitHub API"
+        type:
+          type: string
+          enum: [api, database, manual, calculated]
+        last_successful_fetch:
+          type: string
+          format: date-time
+        collection_frequency:
+          type: string
+          enum: [manual, hourly, daily, weekly]
+
+    DataSourceStatus:
+      allOf:
+        - $ref: '#/components/schemas/DataSource'
+        - type: object
+          properties:
+            status:
+              type: string
+              enum: [active, error, inactive]
+            error_message:
+              type: string
+            retry_count:
+              type: integer
+            next_retry:
+              type: string
+              format: date-time
+
+    DashboardConfig:
+      type: object
+      properties:
+        layout:
+          type: object
+          properties:
+            grid_columns:
+              type: integer
+              default: 12
+            category_positions:
+              type: object
+              additionalProperties:
+                type: object
+                properties:
+                  x:
+                    type: integer
+                  y:
+                    type: integer
+                  width:
+                    type: integer
+                  height:
+                    type: integer
+        filters:
+          type: object
+          properties:
+            default_time_range:
+              type: string
+              enum: [day, week, month, quarter]
+              default: month
+            visible_categories:
+              type: array
+              items:
+                type: string
+                enum: [business_value, quality, efficiency, engagement, progress]
+        refresh_settings:
+          type: object
+          properties:
+            auto_refresh:
+              type: boolean
+              default: true
+            interval_seconds:
+              type: integer
+              minimum: 3600
+              default: 86400
+              description: "Daily update frequency as per clarification"
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+security:
+  - BearerAuth: []

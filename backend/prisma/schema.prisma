@@ -1,0 +1,182 @@
+// Prisma schema for Product Health Dashboard
+// Based on data-model.md specification
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model MetricCategory {
+  id           String @id @default(uuid()) @db.Uuid
+  name         String @unique
+  displayOrder Int    @unique @map("display_order")
+  description  String
+  colorScheme  Json   @map("color_scheme")
+  isCentral    Boolean @map("is_central")
+
+  metrics      Metric[]
+
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@map("metric_categories")
+}
+
+model DataSource {
+  id                   String @id @default(uuid()) @db.Uuid
+  name                 String @unique
+  type                 DataSourceType
+  connectionConfig     Json   @map("connection_config")
+  collectionFrequency  CollectionFrequency @map("collection_frequency")
+  lastSuccessfulFetch  DateTime? @map("last_successful_fetch")
+  isActive             Boolean @default(true) @map("is_active")
+  retryCount           Int @default(0) @map("retry_count")
+  errorMessage         String? @map("error_message")
+
+  metrics              Metric[]
+
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+
+  @@map("data_sources")
+}
+
+model Metric {
+  id                     String @id @default(uuid()) @db.Uuid
+  name                   String
+  categoryId             String @map("category_id") @db.Uuid
+  value                  Decimal @db.Decimal(10, 4)
+  unit                   String
+  calculationMethod      String @map("calculation_method")
+  dataSourceId           String @map("data_source_id") @db.Uuid
+  healthStatus           HealthStatus @map("health_status")
+  isLeadingIndicator     Boolean @map("is_leading_indicator")
+  industryThresholdLow   Decimal @map("industry_threshold_low") @db.Decimal(10, 4)
+  industryThresholdMedium Decimal @map("industry_threshold_medium") @db.Decimal(10, 4)
+  industryThresholdHigh  Decimal @map("industry_threshold_high") @db.Decimal(10, 4)
+  lastCalculatedAt       DateTime? @map("last_calculated_at")
+
+  category               MetricCategory @relation(fields: [categoryId], references: [id])
+  dataSource             DataSource @relation(fields: [dataSourceId], references: [id])
+  timeSeriesData         TimeSeriesData[]
+  calculationMethods     CalculationMethod[]
+  healthIndicator        HealthIndicator?
+  metricOverlays         MetricOverlay[]
+
+  createdAt              DateTime @default(now()) @map("created_at")
+  updatedAt              DateTime @updatedAt @map("updated_at")
+
+  @@unique([name, categoryId])
+  @@map("metrics")
+}
+
+model TimeSeriesData {
+  id               String @id @default(uuid()) @db.Uuid
+  metricId         String @map("metric_id") @db.Uuid
+  value            Decimal @db.Decimal(10, 4)
+  timestamp        DateTime
+  isEstimated      Boolean @default(false) @map("is_estimated")
+  dataQualityScore Decimal @db.Decimal(3, 2) @map("data_quality_score")
+
+  metric           Metric @relation(fields: [metricId], references: [id], onDelete: Cascade)
+
+  @@unique([metricId, timestamp])
+  @@index([metricId, timestamp])
+  @@map("time_series_data")
+}
+
+model CalculationMethod {
+  id                 String @id @default(uuid()) @db.Uuid
+  metricId           String @map("metric_id") @db.Uuid
+  stepNumber         Int @map("step_number")
+  description        String
+  formula            String
+  inputMetrics       Json @map("input_metrics")
+  transformationType TransformationType @map("transformation_type")
+
+  metric             Metric @relation(fields: [metricId], references: [id], onDelete: Cascade)
+
+  @@unique([metricId, stepNumber])
+  @@map("calculation_methods")
+}
+
+model HealthIndicator {
+  id              String @id @default(uuid()) @db.Uuid
+  metricId        String @unique @map("metric_id") @db.Uuid
+  status          HealthStatus
+  thresholdApplied Decimal @map("threshold_applied") @db.Decimal(10, 4)
+  statusReason    String @map("status_reason")
+  calculatedAt    DateTime @map("calculated_at")
+
+  metric          Metric @relation(fields: [metricId], references: [id], onDelete: Cascade)
+
+  @@map("health_indicators")
+}
+
+model Dashboard {
+  id             String @id @default(uuid()) @db.Uuid
+  name           String
+  layoutConfig   Json @map("layout_config")
+  filterSettings Json @map("filter_settings")
+  refreshInterval Int @map("refresh_interval")
+  isDefault      Boolean @default(false) @map("is_default")
+  createdBy      String @map("created_by")
+
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@map("dashboards")
+}
+
+model MetricOverlay {
+  id            String @id @default(uuid()) @db.Uuid
+  metricId      String @map("metric_id") @db.Uuid
+  overlayType   OverlayType @map("overlay_type")
+  content       Json
+  displayConfig Json @map("display_config")
+
+  metric        Metric @relation(fields: [metricId], references: [id], onDelete: Cascade)
+
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@map("metric_overlays")
+}
+
+// Enums
+enum DataSourceType {
+  api
+  database
+  manual
+  calculated
+}
+
+enum CollectionFrequency {
+  manual
+  hourly
+  daily
+  weekly
+}
+
+enum HealthStatus {
+  red
+  yellow
+  green
+}
+
+enum TransformationType {
+  sum
+  average
+  ratio
+  custom
+}
+
+enum OverlayType {
+  calculation
+  data_source
+  trend_analysis
+}

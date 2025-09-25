@@ -1,0 +1,74 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:14-alpine
+    container_name: dashboard-postgres
+    environment:
+      POSTGRES_DB: dashboard_dev
+      POSTGRES_USER: dashboard_user
+      POSTGRES_PASSWORD: dashboard_pass
+      POSTGRES_HOST_AUTH_METHOD: trust
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/database/init:/docker-entrypoint-initdb.d
+    networks:
+      - dashboard-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dashboard_user -d dashboard_dev"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:6-alpine
+    container_name: dashboard-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - dashboard-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    command: redis-server --appendonly yes
+
+  # Development services (optional)
+  adminer:
+    image: adminer:latest
+    container_name: dashboard-adminer
+    ports:
+      - "8080:8080"
+    networks:
+      - dashboard-network
+    depends_on:
+      - postgres
+    environment:
+      ADMINER_DEFAULT_SERVER: postgres
+
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: dashboard-redis-commander
+    ports:
+      - "8081:8081"
+    environment:
+      REDIS_HOSTS: local:redis:6379
+    networks:
+      - dashboard-network
+    depends_on:
+      - redis
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  dashboard-network:
+    driver: bridge
