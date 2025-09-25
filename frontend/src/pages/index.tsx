@@ -6,12 +6,12 @@ import { TimeRangeFilter } from '../components/filters/TimeRangeFilter';
 import { ProductFilter } from '../components/filters/ProductFilter';
 import { RecommendationsPanel } from '../components/recommendations/RecommendationsPanel';
 import { apiService } from '../services/api.service';
-import type { MetricCategory, DashboardConfig } from '../types';
+import type { MetricCategory, DashboardConfig, TimeRange } from '../types';
 
 export default function Dashboard() {
   const [categories, setCategories] = useState<MetricCategory[]>([]);
   const [config, setConfig] = useState<DashboardConfig | null>(null);
-  const [timeRange, setTimeRange] = useState('monthly');
+  const [timeRange, setTimeRange] = useState<TimeRange>('30d');
   const [selectedProduct, setSelectedProduct] = useState('ansible');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -41,7 +41,7 @@ export default function Dashboard() {
     }
   };
 
-  const handleTimeRangeChange = (newRange: string) => {
+  const handleTimeRangeChange = (newRange: TimeRange) => {
     setTimeRange(newRange);
   };
 

@@ -85,7 +85,7 @@ export function TrendChart({ data, height = 300 }: TrendChartProps) {
             y={data[0].target}
             stroke="#ef4444"
             strokeDasharray="5 5"
-            label={{ value: "Target", position: "topRight" }}
+            label={{ value: "Target", position: "top" }}
           />
         )}
 

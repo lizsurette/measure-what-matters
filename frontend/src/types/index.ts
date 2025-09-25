@@ -63,6 +63,8 @@ export interface MetricRecommendations {
   metric_id: string;
   current_status: 'green' | 'yellow' | 'red';
   recommendations: Recommendation[];
+  generated_at: string;
+  model_version: string;
 }
 
 // Integration status
